@@ -1,6 +1,9 @@
 #include "stdio.h"
 #include "stdlib.h"
 #include "string.h"
+#include "sys/wait.h"
+#include "unistd.h"
+#include "../include/commands.h"
 
 #define LGZ_TOK_BUFSIZE 64 
 #define LGZ_TOK_DELIM " \t\r\n\a" 
@@ -9,17 +12,19 @@
 void lgz_loop(void);
 char *lgz_read_line(void);
 char **lgz_split_line(char *line);
+int lgz_execute(char **args);
+int lgz_launch(char **args);
 
 void lgz_loop(void) {
-    char *line = NULL;
-    char **args = NULL;
-    int status = 0;
+    char *line;
+    char **args;
+    int status;
 
     do {
-        printf("< ");
+        printf("|>: ");
         line = lgz_read_line();
         args = lgz_split_line(line);
-        // status = lgz_execute(args);
+        status = lgz_execute(args);
 
         free(line);
         free(args);
@@ -40,8 +45,8 @@ char *lgz_read_line(void) {
 
     while (1) {
         // Read a character.
-        int c = 0;
-        scanf("%d", &c);
+        c = getchar();
+
         // If we hit EOF, replace it with a null character and return.
         if (c == EOF || c == '\n') {
             buffer[position] = '\0';
@@ -52,7 +57,6 @@ char *lgz_read_line(void) {
         position++;
 
         // If we have exceeded the buffer, reallocate
-        
         if (position >= bufsize) {
             bufsize += LGZ_RL_BUFSIZE;
             buffer = realloc(buffer, bufsize);
@@ -92,4 +96,27 @@ char **lgz_split_line(char *line) {
     }
     tokens[position] = NULL;
     return tokens;
+}
+
+int lgz_launch(char **args) {
+    pid_t pid, wpid;
+    int status;
+
+    pid = fork();
+    if (pid == 0) {
+        // Child process
+        if (execvp(args[0], args) == -1) {
+            perror("lgz");
+        }
+        exit(EXIT_FAILURE);
+    } else if (pid < 0) {
+        // Error forking
+        perror("lgz");
+    } else {
+        // Parent process
+        do {
+            wpid = waitpid(pid, &status, WUNTRACED);
+            } while (!WIFEXITED(status) && !WIFSIGNALED(status));
+    }
+    return 1;
 }
