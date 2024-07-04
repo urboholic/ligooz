@@ -26,3 +26,10 @@ jobs:
 
     - name: make clean
       run: make clean
+
+    - name: remove the bin folder
+      run: rm bin
+
+    - name: remove the build folder
+      run: rm build
+
